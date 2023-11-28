@@ -433,7 +433,7 @@ class Debugger(object):
 
       return color
 
-  def plot_tracking(self, image, tlwhs, obj_ids, scores=None, frame_id=0, fps=0., ids2=None):
+  def plot_tracking(self, image, tlwhs, obj_ids, cls_ids, scores=None, frame_id=0, fps=0., ids2=None):
       im = np.ascontiguousarray(np.copy(image))
       im_h, im_w = im.shape[:2]
 
@@ -442,8 +442,7 @@ class Debugger(object):
       text_scale = 2
       text_thickness = 2
       line_thickness = 3
-
-      radius = max(5, int(im_w/140.))
+      
       cv2.putText(im, 'frame: %d fps: %.2f num: %d' % (frame_id, fps, len(tlwhs)),
                   (0, int(15 * text_scale)), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), thickness=2)
 
@@ -451,13 +450,19 @@ class Debugger(object):
           x1, y1, w, h = tlwh
           intbox = tuple(map(int, (x1, y1, x1 + w, y1 + h)))
           obj_id = int(obj_ids[i])
+          cls_id = int(cls_ids[i]) - 1
+
+          txt = '{}-{}'.format(int(obj_id), coco_class_name[int(cls_id)])
+          font = cv2.FONT_HERSHEY_SIMPLEX
+          cat_size = cv2.getTextSize(txt, font, 0.5, 2)[0]
+
           id_text = '{}'.format(int(obj_id))
           if ids2 is not None:
               id_text = id_text + ', {}'.format(int(ids2[i]))
           color = self.get_color(abs(obj_id))
           cv2.rectangle(im, intbox[0:2], intbox[2:4], color=color, thickness=line_thickness)
-          cv2.putText(im, id_text, (intbox[0], intbox[1]), cv2.FONT_HERSHEY_PLAIN, text_scale, (0, 0, 255),
-                      thickness=text_thickness)
+          cv2.rectangle(im, (intbox[0], intbox[1]-cat_size[1]-2), (intbox[0]+cat_size[0], intbox[1]-2), color, -1)
+          cv2.putText(im, txt, (intbox[0], intbox[1]-2), font, 0.5, (0,0,0), thickness=1, lineType=cv2.LINE_AA)          
       return im
 
 kitti_class_name = [
