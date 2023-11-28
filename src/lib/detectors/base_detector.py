@@ -12,6 +12,8 @@ from models.model import create_model, load_model
 from utils.image import get_affine_transform
 from utils.debugger import Debugger
 
+from tracker.byte_tracker import BYTETracker
+from tracking_utils.timer import Timer
 
 class BaseDetector(object):
   def __init__(self, opt):
@@ -33,6 +35,10 @@ class BaseDetector(object):
     self.scales = opt.test_scales
     self.opt = opt
     self.pause = True
+
+    self.tracker = BYTETtracker(opt, frame_rate = 30)
+    self.timer = Timer()
+    self.frame_id =0
 
   def pre_process(self, image, scale, meta=None):
     height, width = image.shape[0:2]
@@ -139,6 +145,34 @@ class BaseDetector(object):
     if self.opt.debug >= 1:
       self.show_results(debugger, image, results)
     
-    return {'results': results, 'tot': tot_time, 'load': load_time,
-            'pre': pre_time, 'net': net_time, 'dec': dec_time,
-            'post': post_time, 'merge': merge_time}
+    if self.opt.tracking:
+      online_tlwhs, online_ids = self.tracking(image, results, self.tracker, self.timer)
+      online_im = debugger.plot_tracking(image, online_tlwhs, online_ids, frame_id=self.frame_id + 1, fps=1./self.timer.average_time)
+      self.frame_id +=1
+      return {'results': results, 'tot': tot_time, 'load': load_time,
+              'pre': pre_time, 'net': net_time, 'dec': dec_time,
+              'post': post_time, 'merge': merge_time}, online_im
+    else:
+      return {'results': results, 'tot': tot_time, 'load': load_time,
+              'pre': pre_time, 'net': net_time, 'dec': dec_time,
+              'post': post_time, 'merge': merge_time}
+
+  def tracking(self, image, results, tracker, timer):
+    height, width = image.shape[0:2]
+    timer.tic()
+    output = torch.tensor([])
+    online_targets = tracker.update(output, [height, width], (height, width))
+    online_tlwhs = []
+    online_ids = []
+    online_scores = []
+    for t in online_targets:
+        tlwh = t.tlwh
+        tid = t.track_id
+        vertical = tlwh[2] / tlwh[3] > self.opt.aspect_ratio_thresh
+        if tlwh[2] * tlwh[3] > self.opt.min_box_area and not vertical:
+            online_tlwhs.append(tlwh)
+            online_ids.append(tid)
+            online_scores.append(t.score)            
+    timer.toc()
+
+    return online_tlwhs, online_ids
