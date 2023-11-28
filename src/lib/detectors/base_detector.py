@@ -146,7 +146,7 @@ class BaseDetector(object):
       self.show_results(debugger, image, results)
     
     if self.opt.tracking:
-      online_tlwhs, online_ids = self.tracking(image, results, self.tracker, self.timer)
+      online_tlwhs, online_ids, online_classes = self.tracking(image, results, self.tracker, self.timer)
       online_im = debugger.plot_tracking(image, online_tlwhs, online_ids, frame_id=self.frame_id + 1, fps=1./self.timer.average_time)
       self.frame_id +=1
       return {'results': results, 'tot': tot_time, 'load': load_time,
@@ -161,10 +161,17 @@ class BaseDetector(object):
     height, width = image.shape[0:2]
     timer.tic()
     output = torch.tensor([])
-    online_targets = tracker.update(output, [height, width], (height, width))
+    class_id = torch.tensor([])
+
+    for i, result in results.items():
+      output = torch.cat([output, torch.tensor(result)[:,:5]], dim = 0)
+      class_id = torch.cat([class_id, torch.tensor([i]*len(result))], dim = 0)
+
+    online_targets = tracker.update(output, class_id, [height, width], (height, width))
     online_tlwhs = []
     online_ids = []
     online_scores = []
+    online_classes = []
     for t in online_targets:
         tlwh = t.tlwh
         tid = t.track_id
@@ -172,7 +179,8 @@ class BaseDetector(object):
         if tlwh[2] * tlwh[3] > self.opt.min_box_area and not vertical:
             online_tlwhs.append(tlwh)
             online_ids.append(tid)
-            online_scores.append(t.score)            
+            online_scores.append(t.score)
+            online_classes.append(t.cid)            
     timer.toc()
 
-    return online_tlwhs, online_ids
+    return online_tlwhs, online_ids, online_classes
