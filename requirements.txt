@@ -1,7 +1,8 @@
-opencv-python
+opencv-python==4.6.0.66
 Cython
 numba
 progress
 matplotlib
-easydict
-scipy
+torch
+torchvision
+torchaudio
