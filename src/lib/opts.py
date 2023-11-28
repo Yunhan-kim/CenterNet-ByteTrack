@@ -223,6 +223,18 @@ class opts(object):
                              help='use ground truth human joint local offset.')
     self.parser.add_argument('--eval_oracle_dep', action='store_true', 
                              help='use ground truth depth.')
+    
+    # tracking args
+    self.parser.add_argument('--tracking', action='store_true', help='use object tracking.')
+    self.parser.add_argument("--track_thresh", type=float, default=0.5, help="tracking confidence threshold")
+    self.parser.add_argument("--track_buffer", type=int, default=30, help="the frames for keep lost tracks")
+    self.parser.add_argument("--match_thresh", type=float, default=0.8, help="matching threshold for tracking")
+    self.parser.add_argument(
+        "--aspect_ratio_thresh", type=float, default=1.6,
+        help="threshold for filtering out boxes of which aspect ratio are above the given value."
+    )
+    self.parser.add_argument('--min_box_area', type=float, default=10, help='filter out tiny boxes')
+    self.parser.add_argument("--mot20", dest="mot20", default=False, action="store_true", help="test mot20.")
 
   def parse(self, args=''):
     if args == '':
