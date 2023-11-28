@@ -147,7 +147,7 @@ class BaseDetector(object):
     
     if self.opt.tracking:
       online_tlwhs, online_ids, online_classes = self.tracking(image, results, self.tracker, self.timer)
-      online_im = debugger.plot_tracking(image, online_tlwhs, online_ids, frame_id=self.frame_id + 1, fps=1./self.timer.average_time)
+      online_im = debugger.plot_tracking(image, online_tlwhs, online_ids, online_classes, frame_id=self.frame_id + 1, fps=1./self.timer.average_time)
       self.frame_id +=1
       return {'results': results, 'tot': tot_time, 'load': load_time,
               'pre': pre_time, 'net': net_time, 'dec': dec_time,
